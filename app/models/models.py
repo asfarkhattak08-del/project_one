@@ -1,0 +1,130 @@
+
+import enum
+from datetime import date, datetime
+from tkinter import CASCADE
+from turtle import title
+from xmlrpc.client import boolean
+from pydantic import EmailStr
+from rich.pretty import d
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Boolean,
+    Text,
+    DateTime,
+    ForeignKey,
+    Table,
+    Enum,
+    null,
+)
+from sqlalchemy.orm import relationship
+from app.db.Session import Base
+
+
+# --- Enums ---
+class TaskStatus(str, enum.Enum):
+    TODO = "TODO"
+    IN_PROGRESS = "IN_PROGRESS"
+    DONE = "DONE"
+
+
+class TaskPriority(str, enum.Enum):
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+
+
+class UserRole(str, enum.Enum):
+    USER = "user"
+    ADMIN = "admin"
+
+
+# --- Many-to-Many Association Table ---
+# Association table connecting Tasks and Labels
+task_labels = Table(
+    "task_labels",
+    Base.metadata,
+    Column("task_id", Integer, ForeignKey("tasks.id", ondelete="CASCADE"), primary_key=True),
+    Column("label_id", Integer, ForeignKey("labels.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
+class User(Base):
+   __tablename__ = 'users'
+   
+   id = Column(Integer, primary_key=True, index=True)
+   email = Column(EmailStr, nullable=False)
+   hashed_password = Column(String, nullable=False)
+   full_name = Column(String,nullable=True)
+   role = Column(Enum(UserRole), default=UserRole.USER, nullable=False)
+   is_active = Column(Boolean,default=True,nullable=False)
+   created_at = Column(DateTime,default=datetime.utcnow , nullable=False)
+   
+   
+class Team(Base):
+    __tablename__ = 'teams'
+    
+    id = Column(Integer, primary_key=True, nullable=False)
+    name = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete=CASCADE), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    
+class Project(Base):
+    __tablename__ = 'projects'
+    
+    id = Column(Integer, primary_key=True, nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete=CASCADE), nullable=False)
+    team_id = Column(Integer, ForeignKey("team.id", ondelete=CASCADE), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+class Task(Base):
+    __tablename__ = 'tasks'
+    
+    id = Column(Integer, primary_key=True, nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    status = Column(Enum(TaskStatus), default=TaskStatus.TODO, nullable=False)
+    priority = Column(Enum(TaskPriority), default=TaskPriority.MEDIUM, nullable=False)
+    
+    project_id = Column(Integer, ForeignKey('projects.id', ondelete=CASCADE))
+    assignee_id = Column(Integer, ForeignKey('users.id', ondelete="SET NULL"))
+    
+    created_at = Column(DateTime,default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime,default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    
+class Comment(Base):
+    __tablename__ = 'comments'
+    
+    id = Column(Integer, primary_key=True, nullable=False)
+    content = Column(Text, nullable=False)
+    author_id = Column(Integer, ForeignKey('users.id', ondelete=CASCADE))
+    task_id = Column(Integer, ForeignKey('tasks.id', ondelete=CASCADE), nullable= False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+
+class Label(Base):
+    __tablename__ = "labels"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True, nullable=False)
+    color_hex = Column(String, default="#6C757D", nullable=False)
+    
+    
+    
+class ActivityLog(Base):
+    __tablename__ = "activity_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    action = Column(String, nullable=False)  
+    entity_type = Column(String, nullable=False)  
+    entity_id = Column(Integer, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    
