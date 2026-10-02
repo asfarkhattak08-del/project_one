@@ -1,11 +1,6 @@
 
 import enum
-from datetime import date, datetime
-from tkinter import CASCADE
-from turtle import title
-from xmlrpc.client import boolean
-from pydantic import EmailStr
-from rich.pretty import d
+from datetime import datetime
 from sqlalchemy import (
     Column,
     Integer,
@@ -19,7 +14,7 @@ from sqlalchemy import (
     null,
 )
 from sqlalchemy.orm import relationship
-from app.db.Session import Base
+from app.db.session import Base
 
 
 # --- Enums ---
@@ -54,12 +49,21 @@ class User(Base):
    __tablename__ = 'users'
    
    id = Column(Integer, primary_key=True, index=True)
-   email = Column(EmailStr, nullable=False)
+   email = Column(String, nullable=False, unique=True)
    hashed_password = Column(String, nullable=False)
    full_name = Column(String,nullable=True)
    role = Column(Enum(UserRole), default=UserRole.USER, nullable=False)
    is_active = Column(Boolean,default=True,nullable=False)
    created_at = Column(DateTime,default=datetime.utcnow , nullable=False)
+   
+   
+   
+   owned_projects = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
+   assigned_tasks = relationship('Task', back_populates="assignee")
+   comments = relationship('Comment', back_populates="author", cascade="all, delete-orphan")
+   activity_logs = relationship("ActivityLog", back_populates="user")
+   teams = relationship("Team", back_populates="owner")
+   
    
    
 class Team(Base):
@@ -68,8 +72,13 @@ class Team(Base):
     id = Column(Integer, primary_key=True, nullable=False)
     name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
-    owner_id = Column(Integer, ForeignKey("users.id", ondelete=CASCADE), nullable=False)
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    
+    
+    owner = relationship("User", back_populates="teams")
+    projects = relationship("Project", back_populates="team")
     
     
 class Project(Base):
@@ -78,9 +87,16 @@ class Project(Base):
     id = Column(Integer, primary_key=True, nullable=False)
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
-    owner_id = Column(Integer, ForeignKey("users.id", ondelete=CASCADE), nullable=False)
-    team_id = Column(Integer, ForeignKey("team.id", ondelete=CASCADE), nullable=False)
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    team_id = Column(Integer, ForeignKey("teams.id", ondelete="CASCADE"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    
+    
+    owner = relationship("User", back_populates="owned_projects")
+    team = relationship("Team", back_populates="projects")
+    tasks = relationship("Task", back_populates="project", cascade="all, delete-orphan")
+    
     
 class Task(Base):
     __tablename__ = 'tasks'
@@ -91,11 +107,19 @@ class Task(Base):
     status = Column(Enum(TaskStatus), default=TaskStatus.TODO, nullable=False)
     priority = Column(Enum(TaskPriority), default=TaskPriority.MEDIUM, nullable=False)
     
-    project_id = Column(Integer, ForeignKey('projects.id', ondelete=CASCADE))
+    project_id = Column(Integer, ForeignKey('projects.id', ondelete="CASCADE"))
     assignee_id = Column(Integer, ForeignKey('users.id', ondelete="SET NULL"))
     
     created_at = Column(DateTime,default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime,default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    
+
+    project = relationship("Project", back_populates="tasks")
+    assignee = relationship("User", back_populates="assigned_tasks")
+    comments = relationship("Comment", back_populates="task", cascade="all, delete-orphan")
+    labels = relationship("Label", secondary=task_labels, back_populates="tasks")
+    
     
     
 class Comment(Base):
@@ -103,9 +127,13 @@ class Comment(Base):
     
     id = Column(Integer, primary_key=True, nullable=False)
     content = Column(Text, nullable=False)
-    author_id = Column(Integer, ForeignKey('users.id', ondelete=CASCADE))
-    task_id = Column(Integer, ForeignKey('tasks.id', ondelete=CASCADE), nullable= False)
+    author_id = Column(Integer, ForeignKey('users.id', ondelete="CASCADE"))
+    task_id = Column(Integer, ForeignKey('tasks.id', ondelete="CASCADE"), nullable= False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    
+    task = relationship("Task", back_populates="comments")
+    author = relationship("User", back_populates="comments")
     
 
 class Label(Base):
@@ -115,6 +143,8 @@ class Label(Base):
     name = Column(String, unique=True, index=True, nullable=False)
     color_hex = Column(String, default="#6C757D", nullable=False)
     
+    
+    tasks = relationship("Task", secondary=task_labels, back_populates="labels")
     
     
 class ActivityLog(Base):
@@ -128,3 +158,4 @@ class ActivityLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     
     
+    user = relationship("User", back_populates="activity_logs")
