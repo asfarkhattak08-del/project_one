@@ -31,3 +31,7 @@ class LoginResponse(BaseModel):
     
 class TokenData(BaseModel):
     id: Optional[int] = None
+    
+class CreateTeam(BaseModel):
+    name: str
+    description: str

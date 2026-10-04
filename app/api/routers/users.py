@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException,status
 from sqlmodel import Session
 from pwdlib import PasswordHash
+from app.api.routers import oauth2
+from app.db import session
 from app.db.session import get_db
 from app.models import models
-from app.schemas.user import UserCreate, UserResponse 
+from app.schemas.user import CreateTeam, TokenData, UserCreate, UserResponse 
 
 
 password_hash = PasswordHash.recommended()
@@ -25,3 +27,15 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
     return new_user
+
+
+@router.post("/teams")
+def create_team(team : CreateTeam ,db: session = Depends(get_db), current_user: TokenData = Depends(oauth2.get_current_user)):
+    
+    new_team = models.Team(owner_id = current_user.id, **team.dict())
+
+    db.add(new_team)
+    db.commit()
+    db.refresh(new_team)
+     
+    return new_team
