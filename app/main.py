@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routers import users, auth
+from app.api.routers import projects, users, auth
 from app.db.session import Base, engine
 from app import models
 
@@ -30,3 +30,4 @@ def root():
 
 app.include_router(auth.router)
 app.include_router(users.router)
+app.include_router(projects.router)

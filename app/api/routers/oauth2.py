@@ -28,7 +28,7 @@ def verify_access_token(token: str, credentionals_execptions):
         id = payload.get("user_id")
         if id is None:
             raise credentionals_execptions
-        return user.TokenData(id=str(id))
+        return user.TokenData(id=id)
     except InvalidTokenError:
         raise credentionals_execptions
 

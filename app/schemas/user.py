@@ -28,3 +28,6 @@ class Token(BaseModel):
 class LoginResponse(BaseModel):
     user: UserResponse
     token: Token
+    
+class TokenData(BaseModel):
+    id: Optional[int] = None

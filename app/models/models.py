@@ -1,6 +1,7 @@
 
 import enum
-from datetime import datetime
+from datetime import datetime, timezone
+# from time import timezone
 from sqlalchemy import (
     Column,
     Integer,
@@ -16,6 +17,9 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 
+
+def utcnow():
+    return datetime.now(timezone.utc)
 
 # --- Enums ---
 class TaskStatus(str, enum.Enum):
@@ -54,7 +58,7 @@ class User(Base):
    full_name = Column(String,nullable=True)
    role = Column(Enum(UserRole), default=UserRole.USER, nullable=False)
    is_active = Column(Boolean,default=True,nullable=False)
-   created_at = Column(DateTime,default=datetime.utcnow , nullable=False)
+   created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
    
    
    
@@ -73,7 +77,7 @@ class Team(Base):
     name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     
     
     
@@ -89,8 +93,7 @@ class Project(Base):
     description = Column(Text, nullable=True)
     owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     team_id = Column(Integer, ForeignKey("teams.id", ondelete="CASCADE"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False) 
     
     
     owner = relationship("User", back_populates="owned_projects")
@@ -109,9 +112,7 @@ class Task(Base):
     
     project_id = Column(Integer, ForeignKey('projects.id', ondelete="CASCADE"))
     assignee_id = Column(Integer, ForeignKey('users.id', ondelete="SET NULL"))
-    
-    created_at = Column(DateTime,default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime,default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     
     
 
@@ -129,7 +130,7 @@ class Comment(Base):
     content = Column(Text, nullable=False)
     author_id = Column(Integer, ForeignKey('users.id', ondelete="CASCADE"))
     task_id = Column(Integer, ForeignKey('tasks.id', ondelete="CASCADE"), nullable= False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     
     
     task = relationship("Task", back_populates="comments")
@@ -155,7 +156,7 @@ class ActivityLog(Base):
     entity_type = Column(String, nullable=False)  
     entity_id = Column(Integer, nullable=False)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     
     
     user = relationship("User", back_populates="activity_logs")
