@@ -18,4 +18,15 @@ def create_task(task_in: TaskCreate ,db: session = Depends(session.get_db),
     project = db.Project(models.Project).filter(
         models.Project.id == task_in.project_id,
         models.Project.owner_id == current_user.id
-    )
+    ).first()
+    
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"project Not found")
+    
+    task = models.Task(**task_in.model_dump())
+
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    
+    return task
